@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conway's Game of Life (WebGL)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        canvas {
+            display: block;
+            margin: 0 auto;
+            background-color: #111;
+            box-shadow: 0 0 20px rgba(0, 255, 200, 0.3);
+        }
+        
+        .glow {
+            text-shadow: 0 0 10px rgba(0, 255, 200, 0.7);
+        }
+        
+        .btn-glow:hover {
+            box-shadow: 0 0 15px rgba(0, 255, 200, 0.7);
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200 font-mono">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-4xl font-bold text-center mb-6 glow">
+            <i class="fas fa-gamepad mr-3"></i>Conway's Game of Life
+        </h1>
+        
+        <div class="flex flex-col lg:flex-row gap-8">
+            <!-- Main game area -->
+            <div class="lg:w-3/4">
+                <div class="relative">
+                    <canvas id="gameCanvas" class="w-full max-w-4xl h-auto"></canvas>
+                    
+                    <!-- Pattern selector overlay -->
+                    <div id="patternOverlay" class="absolute inset-0 bg-black bg-opacity-80 hidden flex items-center justify-center">
+                        <div class="bg-gray-800 p-6 rounded-lg max-w-lg w-full">
+                            <h3 class="text-xl font-bold mb-4 flex items-center">
+                                <i class="fas fa-shapes mr-2"></i> Select Starting Pattern
+                            </h3>
+                            
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="col-span-2">
+                                    <h4 class="text-lg font-semibold text-emerald-400 mb-2">Still Lifes</h4>
+                                </div>
+                                <button onclick="selectPattern('beehive')" class="btn-glow bg-gray-700 hover:bg-emerald-700 text-white py-2 px-4 rounded transition">
+                                    <i class="fas fa-hive mr-2"></i> Beehive
+                                </button>
+                                <button onclick="selectPattern('block')" class="btn-glow bg-gray-700 hover:bg-emerald-700 text-white py-2 px-4 rounded transition">
+                                    <i class="fas fa-square mr-2"></i> Block
+                                </button>
+                                <button onclick="selectPattern('loaf')" class="btn-glow bg-gray-700 hover:bg-emerald-700 text-white py-2 px-4 rounded transition">
+                                    <i class="fas fa-bread-slice mr-2"></i> Loaf
+                                </button>
+                                <button onclick="selectPattern('boat')" class="btn-glow bg-gray-700 hover:bg-emerald-700 text-white py-2 px-4 rounded transition">
+                                    <i class="fas fa-ship mr-2"></i> Boat
+                                </button>
+                                
+                                <div class="col-span-2 mt-4">
+                                    <h4 class="text-lg font-semibold text-emerald-400 mb-2">Oscillators</h4>
+                                </div>
+                                <button onclick="selectPattern('blinker')" class="btn-glow bg-gray-700 hover:bg-emerald-700 text-white py-2 px-4 rounded transition">
+                                    <i class="fas fa-sync mr-2"></i> Blinker
+                                </button>
+                                <button onclick="selectPattern('toad')" class="btn-glow bg-gray-700 hover:bg-emerald-700 text-white py-2 px-4 rounded transition">
+                                    <i class="fas fa-frog mr-2"></i> Toad
+                                </button>
+                                <button onclick="selectPattern('beacon')" class="btn-glow bg-gray-700 hover:bg-emerald-700 text-white py-2 px-4 rounded transition">
+                                    <i class="fas fa-broadcast-tower mr-2"></i> Beacon
+                                </button>
+                                <button onclick="selectPattern('pulsar')" class="btn-glow bg-gray-700 hover:bg-emerald-700 text-white py-2 px-4 rounded transition">
+                                    <i class="fas fa-expand mr-2"></i> Pulsar
+                                </button>
+                                
+                                <div class="col-span-2 mt-4">
+                                    <h4 class="text-lg font-semibold text-emerald-400 mb-2">Spaceships</h4>
+                                </div>
+                                <button onclick="selectPattern('glider')" class="btn-glow bg-gray-700 hover:bg-emerald-700 text-white py-2 px-4 rounded transition">
+                                    <i class="fas fa-rocket mr-2"></i> Glider
+                                </button>
+                                <button onclick="selectPattern('spaceship')" class="btn-glow bg-gray-700 hover:bg-emerald-700 text-white py-2 px-4 rounded transition">
+                                    <i class="fas fa-space-shuttle mr-2"></i> Lightweight Spaceship
+                                </button>
+                                <button onclick="selectPattern('middleweight')" class="btn-glow bg-gray-700 hover:bg-emerald-700 text-white py-2 px-4 rounded transition">
+                                    <i class="fas fa-space-shuttle mr-2"></i> Middleweight Spaceship
+                                </button>
+                                <button onclick="selectPattern('heavyweight')" class="btn-glow bg-gray-700 hover:bg-emerald-700 text-white py-2 px-4 rounded transition">
+                                    <i class="fas fa-space-shuttle mr-2"></i> Heavyweight Spaceship
+                                </button>
+                                
+                                <div class="col-span-2 mt-4">
+                                    <h4 class="text-lg font-semibold text-emerald-400 mb-2">Guns & Generators</h4>
+                                </div>
+                                <button onclick="selectPattern('gosper')" class="btn-glow bg-gray-700 hover:bg-emerald-700 text-white py-2 px-4 rounded transition">
+                                    <i class="fas fa-infinity mr-2"></i> Gosper Glider Gun
+                                </button>
+                                <button onclick="selectPattern('simkinglide')" class="btn-glow bg-gray-700 hover:bg-emerald-700 text-white py-2 px-4 rounded transition">
+                                    <i class="fas fa-infinity mr-2"></i> Simkin Glider Gun
+                                </button>
+                                
+                                <div class="col-span-2 mt-4">
+                                    <h4 class="text-lg font-semibold text-emerald-400 mb-2">Other</h4>
+                                </div>
+                                <button onclick="selectPattern('random')" class="btn-glow bg-gray-700 hover:bg-emerald-700 text-white py-2 px-4 rounded transition">
+                                    <i class="fas fa-random mr-2"></i> Random
+                                </button>
+                                <button onclick="selectPattern('empty')" class="btn-glow bg-gray-700 hover:bg-emerald-700 text-white py-2 px-4 rounded transition">
+                                    <i class="far fa-square mr-2"></i> Empty
+                                </button>
+                            </div>
+                            
+                            <div class="mt-6 flex justify-end">
+                                <button onclick="hidePatternOverlay()" class="btn-glow bg-emerald-600 hover:bg-emerald-500 text-white py-2 px-6 rounded transition">
+                                    <i class="fas fa-check mr-2"></i> Apply
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Controls panel -->
+            <div class="lg:w-1/4 bg-gray-800 p-6 rounded-lg">
+                <h2 class="text-2xl font-bold mb-4 flex items-center">
+                    <i class="fas fa-sliders-h mr-2"></i> Controls
+                </h2>
+                
+                <div class="space-y-5">
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="font-semibold"><i class="fas fa-play mr-2"></i> Simulation</label>
+                            <div class="flex space-x-2">
+                                <button id="playBtn" onclick="toggleSimulation()" class="btn-glow bg-emerald-600 hover:bg-emerald-500 text-white py-1 px-3 rounded">
+                                    <i class="fas fa-play"></i>
+                                </button>
+                                <button onclick="stepSimulation()" class="btn-glow bg-gray-700 hover:bg-gray-600 text-white py-1 px-3 rounded">
+                                    <i class="fas fa-step-forward"></i>
+                                </button>
+                                <button onclick="resetGame()" class="btn-glow bg-gray-700 hover:bg-gray-600 text-white py-1 px-3 rounded">
+                                    <i class="fas fa-redo"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="font-semibold block mb-2"><i class="fas fa-tachometer-alt mr-2"></i> Speed</label>
+                        <input id="speedSlider" type="range" min="1" max="20" value="5" 
+                               class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer" 
+                               onchange="updateSpeed(this.value)">
+                        <div class="flex justify-between text-xs text-gray-400 mt-1">
+                            <span>Slow</span>
+                            <span>Fast</span>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="font-semibold block mb-2"><i class="fas fa-border-all mr-2"></i> Grid Size</label>
+                        <select id="gridSize" onchange="changeGridSize(this.value)" 
+                                class="w-full bg-gray-700 border border-gray-600 text-white p-2 rounded">
+                            <option value="50">50×50 (Small)</option>
+                            <option value="75" selected>75×75 (Medium)</option>
+                            <option value="100">100×100 (Large)</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="font-semibold block mb-2"><i class="fas fa-paint-brush mr-2"></i> Cell Color</label>
+                        <input id="colorPicker" type="color" value="#00ffc8" 
+                               class="w-full h-10 cursor-pointer bg-gray-700 rounded border border-gray-600" 
+                               onchange="updateColor(this.value)">
+                    </div>
+                    
+                    <div>
+                        <button onclick="showPatternOverlay()" 
+                                class="w-full btn-glow bg-blue-600 hover:bg-blue-500 text-white py-2 px-4 rounded transition">
+                            <i class="fas fa-project-diagram mr-2"></i> Select Pattern
+                        </button>
+                    </div>
+                    
+                    <div>
+                        <button onclick="clearBoard()" 
+                                class="w-full btn-glow bg-red-600 hover:bg-red-500 text-white py-2 px-4 rounded transition">
+                            <i class="fas fa-trash-alt mr-2"></i> Clear Board
+                        </button>
+                    </div>
+                    
+                    <div class="pt-2 border-t border-gray-700">
+                        <div class="flex justify-between items-center">
+                            <span class="font-semibold"><i class="fas fa-history mr-2"></i> Generation:</span>
+                            <span id="generationCount" class="text-emerald-400 font-bold">0</span>
+                        </div>
+                        <div class="flex justify-between items-center mt-2">
+                            <span class="font-semibold"><i class="fas fa-calculator mr-2"></i> Live Cells:</span>
+                            <span id="liveCellsCount" class="text-emerald-400 font-bold">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-8 bg-gray-800 p-6 rounded-lg">
+            <h2 class="text-2xl font-bold mb-3 flex items-center">
+                <i class="fas fa-info-circle mr-2"></i> About
+            </h2>
+            
+            <div class="grid md:grid-cols-3 gap-6">
+                <div>
+                    <h3 class="text-xl font-semibold mb-2 text-emerald-400">Rules</h3>
+                    <ul class="list-disc list-inside space-y-1">
+                        <li>Any live cell with fewer than two live neighbors dies (underpopulation).</li>
+                        <li>Any live cell with two or three live neighbors lives on.</li>
+                        <li>Any live cell with more than three live neighbors dies (overpopulation).</li>
+                        <li>Any dead cell with exactly three live neighbors becomes a live cell (reproduction).</li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h3 class="text-xl font-semibold mb-2 text-emerald-400">Controls</h3>
+                    <ul class="space-y-1">
+                        <li><span class="font-bold">Left Click:</span> Toggle cells</li>
+                        <li><span class="font-bold">Play/Pause:</span> Start/Stop simulation</li>
+                        <li><span class="font-bold">Step:</span> Advance one generation</li>
+                        <li><span class="font-bold">Reset:</span> Clear and reset simulation</li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h3 class="text-xl font-semibold mb-2 text-emerald-400">Patterns</h3>
+                    <p>Try different starting patterns from the panel. The "Gosper Glider Gun" creates an infinite stream of gliders. "Pulsar" oscillates between 3 states.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Game constants
+        const DEFAULT_GRID_SIZE = 75;
+        const DEFAULT_CELL_COLOR = "#00ffc8";
+        
+        // Game state
+        let gridSize = DEFAULT_GRID_SIZE;
+        let cellSize = 0;
+        let gridWidth = 0;
+        let gridHeight = 0;
+        let isRunning = false;
+        let animationId = null;
+        let generation = 0;
+        let speed = 5;
+        let cellColor = DEFAULT_CELL_COLOR;
+        let mouseDown = false;
+        
+        // WebGL variables
+        let gl = null;
+        let vertexBuffer = null;
+        let indexBuffer = null;
+        let shaderProgram = null;
+        let positionAttributeLocation = null;
+        let resolutionUniformLocation = null;
+        let colorUniformLocation = null;
+        
+        // Game grids
+        let currentGrid = [];
+        let nextGrid = [];
+        
+        // Initialize the game
+        function initGame() {
+            const canvas = document.getElementById('gameCanvas');
+            setupCanvas(canvas);
+            setupWebGL(canvas);
+            setupEventListeners(canvas);
+            createEmptyGrids();
+            
+            // Start with a random pattern
+            selectPattern('random');
+            
+            // Initial render
+            render();
+        }
+        
+        // Set up canvas dimensions
+        function setupCanvas(canvas) {
+            // Size canvas to be as large as possible while maintaining square cells
+            const maxWidth = Math.min(window.innerWidth * 0.9, 800);
+            const maxHeight = window.innerHeight * 0.7;
+            const availableSize = Math.min(maxWidth, maxHeight);
+            
+            canvas.width = availableSize;
+            canvas.height = availableSize;
+            
+            // Calculate cell size and grid dimensions
+            cellSize = canvas.width / gridSize;
+            gridWidth = Math.floor(canvas.width / cellSize);
+            gridHeight = Math.floor(canvas.height / cellSize);
+        }
+        
+        // Set up WebGL context and resources
+        function setupWebGL(canvas) {
+            gl = canvas.getContext('webgl');
+            
+            if (!gl) {
+                alert('WebGL not supported in your browser. Try using Chrome or Firefox.');
+                return;
+            }
+            
+            // Create and bind vertex buffer
+            vertexBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+            
+            // Create and bind index buffer
+            indexBuffer = gl.createBuffer();
+            
+            // Create and compile shaders
+            const vertexShader = createShader(gl, gl.VERTEX_SHADER, `
+                attribute vec2 a_position;
+                uniform vec2 u_resolution;
+                
+                void main() {
+                    vec2 zeroToOne = a_position / u_resolution;
+                    vec2 clipSpace = zeroToOne * 2.0 - 1.0;
+                    gl_Position = vec4(clipSpace * vec2(1, -1), 0, 1);
+                }
+            `);
+            
+            const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, `
+                precision mediump float;
+                uniform vec3 u_color;
+                
+                void main() {
+                    gl_FragColor = vec4(u_color, 1.0);
+                }
+            `);
+            
+            // Create and link shader program
+            shaderProgram = createProgram(gl, vertexShader, fragmentShader);
+            
+            // Get attribute and uniform locations
+            positionAttributeLocation = gl.getAttribLocation(shaderProgram, 'a_position');
+            resolutionUniformLocation = gl.getUniformLocation(shaderProgram, 'u_resolution');
+            colorUniformLocation = gl.getUniformLocation(shaderProgram, 'u_color');
+            
+            gl.enableVertexAttribArray(positionAttributeLocation);
+            gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+            gl.clearColor(0.05, 0.05, 0.05, 1.0);
+        }
+        
+        // Create a shader of the given type, upload the source and compile it
+        function createShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                console.error('Shader compile error:', gl.getShaderInfoLog(shader));
+                gl.deleteShader(shader);
+                return null;
+            }
+            
+            return shader;
+        }
+        
+        // Create a program with the given vertex and fragment shaders
+        function createProgram(gl, vertexShader, fragmentShader) {
+            const program = gl.createProgram();
+            gl.attachShader(program, vertexShader);
+            gl.attachShader(program, fragmentShader);
+            gl.linkProgram(program);
+            
+            if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+                console.error('Program link error:', gl.getProgramInfoLog(program));
+                return null;
+            }
+            
+            return program;
+        }
+        
+        // Set up event listeners
+        function setupEventListeners(canvas) {
+            canvas.addEventListener('mousedown', handleMouseDown);
+            canvas.addEventListener('mousemove', handleMouseMove);
+            canvas.addEventListener('mouseup', handleMouseUp);
+            window.addEventListener('resize', handleResize);
+        }
+        
+        // Mouse down handler
+        function handleMouseDown(e) {
+            if (isRunning) return;
+            mouseDown = true;
+            toggleCellAtPosition(e.clientX, e.clientY);
+        }
+        
+        // Mouse move handler
+        function handleMouseMove(e) {
+            if (mouseDown && !isRunning) {
+                toggleCellAtPosition(e.clientX, e.clientY);
+            }
+        }
+        
+        // Mouse up handler
+        function handleMouseUp() {
+            mouseDown = false;
+        }
+        
+        // Resize handler
+        function handleResize() {
+            const canvas = document.getElementById('gameCanvas');
+            setupCanvas(canvas);
+            
+            if (gl) {
+                gl.viewport(0, 0, canvas.width, canvas.height);
+            }
+            
+            render();
+        }
+        
+        // Toggle cell at the given screen coordinates
+        function toggleCellAtPosition(x, y) {
+            const canvas = document.getElementById('gameCanvas');
+            const rect = canvas.getBoundingClientRect();
+            
+            // Convert to canvas coordinates
+            const canvasX = x - rect.left;
+            const canvasY = y - rect.top;
+            
+            // Convert to grid coordinates
+            const gridX = Math.floor(canvasX / cellSize);
+            const gridY = Math.floor(canvasY / cellSize);
+            
+            // Toggle the cell
+            if (gridX >= 0 && gridX < gridWidth && gridY >= 0 && gridY < gridHeight) {
+                currentGrid[gridY * gridWidth + gridX] = currentGrid[gridY * gridWidth + gridX] ? 0 : 1;
+                updateLiveCellsCount();
+                render();
+            }
+        }
+        
+        // Create empty grids
+        function createEmptyGrids() {
+            const size = gridWidth * gridHeight;
+            currentGrid = new Array(size).fill(0);
+            nextGrid = new Array(size).fill(0);
+        }
+        
+        // Randomize the grid
+        function randomizeGrid() {
+            for (let i = 0; i < gridWidth * gridHeight; i++) {
+                currentGrid[i] = Math.random() > 0.85 ? 1 : 0;
+            }
+            generation = 0;
+            updateGenerationCount();
+            updateLiveCellsCount();
+            render();
+        }
+        
+        // Clear the grid
+        function clearBoard() {
+            currentGrid.fill(0);
+            generation = 0;
+            updateGenerationCount();
+            updateLiveCellsCount();
+            render();
+        }
+        
+        // Reset the game to initial state
+        function resetGame() {
+            stopSimulation();
+            clearBoard();
+            resetControls();
+        }
+        
+        // Reset control elements to default
+        function resetControls() {
+            document.getElementById('speedSlider').value = 5;
+            speed = 5;
+            document.getElementById('colorPicker').value = DEFAULT_CELL_COLOR;
+            cellColor = DEFAULT_CELL_COLOR;
+            document.getElementById('gridSize').value = DEFAULT_GRID_SIZE;
+        }
+        
+        // Toggle simulation running state
+        function toggleSimulation() {
+            if (isRunning) {
+                stopSimulation();
+                document.getElementById('playBtn').innerHTML = '<i class="fas fa-play"></i>';
+                document.getElementById('playBtn').classList.remove('bg-red-600', 'hover:bg-red-500');
+                document.getElementById('playBtn').classList.add('bg-emerald-600', 'hover:bg-emerald-500');
+            } else {
+                startSimulation();
+                document.getElementById('playBtn').innerHTML = '<i class="fas fa-pause"></i>';
+                document.getElementById('playBtn').classList.remove('bg-emerald-600', 'hover:bg-emerald-500');
+                document.getElementById('playBtn').classList.add('bg-red-600', 'hover:bg-red-500');
+            }
+        }
+        
+        // Start the simulation
+        function startSimulation() {
+            if (isRunning) return;
+            isRunning = true;
+            loop();
+        }
+        
+        // Stop the simulation
+        function stopSimulation() {
+            isRunning = false;
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+        }
+        
+        // Advance the simulation by one step/generation
+        function stepSimulation() {
+            if (isRunning) return;
+            computeNextGeneration();
+            render();
+        }
+        
+        // Main loop for running simulation
+        function loop() {
+            if (!isRunning) return;
+            
+            // Compute next generation based on current speed
+            computeNextGeneration();
+            render();
+            
+            // Adjust speed so it doesn't run too fast
+            const delay = 100 - (speed * 4);
+            
+            animationId = setTimeout(() => {
+                animationId = requestAnimationFrame(loop);
+            }, delay);
+        }
+        
+        // Compute next generation of cells
+        function computeNextGeneration() {
+            for (let y = 0; y < gridHeight; y++) {
+                for (let x = 0; x < gridWidth; x++) {
+                    const idx = y * gridWidth + x;
+                    const neighbors = countLiveNeighbors(x, y);
+                    
+                    // Apply Conway's rules
+                    if (currentGrid[idx] === 1) {
+                        // Cell is alive
+                        nextGrid[idx] = (neighbors === 2 || neighbors === 3) ? 1 : 0;
+                    } else {
+                        // Cell is dead
+                        nextGrid[idx] = (neighbors === 3) ? 1 : 0;
+                    }
+                }
+            }
+            
+            // Swap grids
+            [currentGrid, nextGrid] = [nextGrid, currentGrid];
+            
+            generation++;
+            updateGenerationCount();
+            updateLiveCellsCount();
+        }
+        
+        // Count live neighbors for a cell at (x, y)
+        function countLiveNeighbors(x, y) {
+            let count = 0;
+            
+            for (let dy = -1; dy <= 1; dy++) {
+                for (let dx = -1; dx <= 1; dx++) {
+                    if (dx === 0 && dy === 0) continue;
+                    
+                    const nx = (x + dx + gridWidth) % gridWidth;
+                    const ny = (y + dy + gridHeight) % gridHeight;
+                    const idx = ny * gridWidth + nx;
+                    
+                    count += currentGrid[idx];
+                }
+            }
+            
+            return count;
+        }
+        
+        // Render the grid using WebGL
+        function render() {
+            if (!gl) return;
+            
+            gl.clear(gl.COLOR_BUFFER_BIT);
+            
+            // Convert cell data to vertex data
+            const vertices = [];
+            
+            for (let y = 0; y < gridHeight; y++) {
+                for (let x = 0; x < gridWidth; x++) {
+                    const idx = y * gridWidth + x;
+                    
+                    if (currentGrid[idx]) {
+                        const left = x * cellSize;
+                        const right = left + cellSize;
+                        const top = y * cellSize;
+                        const bottom = top + cellSize;
+                        
+                        // Add vertices for two triangles composing the rectangle
+                        vertices.push(left, top, right, top, right, bottom);   // Triangle 1
+                        vertices.push(left, top, right, bottom, left, bottom); // Triangle 2
+                    }
+                }
+            }
+            
+            if (vertices.length === 0) return;
+            
+            // Upload vertex data
+            gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.DYNAMIC_DRAW);
+            
+            // Set up the attribute pointer
+            gl.vertexAttribPointer(positionAttributeLocation, 2, gl.FLOAT, false, 0, 0);
+            
+            // Use the shader program and set uniforms
+            gl.useProgram(shaderProgram);
+            gl.uniform2f(resolutionUniformLocation, gl.canvas.width, gl.canvas.height);
+            
+            // Convert hex color to RGB
+            const r = parseInt(cellColor.substr(1, 2), 16) / 255;
+            const g = parseInt(cellColor.substr(3, 2), 16) / 255;
+            const b = parseInt(cellColor.substr(5, 2), 16) / 255;
+            gl.uniform3f(colorUniformLocation, r, g, b);
+            
+            // Draw the triangles
+            gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 2);
+        }
+        
+        // Update generation count display
+        function updateGenerationCount() {
+            document.getElementById('generationCount').textContent = generation;
+        }
+        
+        // Update live cells count display
+        function updateLiveCellsCount() {
+            const count = currentGrid.reduce((sum, cell) => sum + cell, 0);
+            document.getElementById('liveCellsCount').textContent = count;
+        }
+        
+        // Change grid size
+        function changeGridSize(newSize) {
+            gridSize = parseInt(newSize);
+            stopSimulation();
+            
+            const canvas = document.getElementById('gameCanvas');
+            setupCanvas(canvas);
+            if (gl) {
+                gl.viewport(0, 0, canvas.width, canvas.height);
+            }
+            
+            createEmptyGrids();
+            selectPattern('empty');
+        }
+        
+        // Update simulation speed
+        function updateSpeed(newSpeed) {
+            speed = parseInt(newSpeed);
+        }
+        
+        // Update cell color
+        function updateColor(newColor) {
+            cellColor = newColor;
+            render();
+        }
+        
+        // Show pattern selection overlay
+        function showPatternOverlay() {
+            if (isRunning) toggleSimulation();
+            document.getElementById('patternOverlay').classList.remove('hidden');
+        }
+        
+        // Hide pattern selection overlay
+        function hidePatternOverlay() {
+            document.getElementById('patternOverlay').classList.add('hidden');
+        }
+        
+        // Select a pattern to start with
+        function selectPattern(pattern) {
+            clearBoard();
+            
+            const centerX = Math.floor(gridWidth / 2);
+            const centerY = Math.floor(gridHeight / 2);
+            
+            switch (pattern) {
+                case 'random':
+                    randomizeGrid();
+                    break;
+                    
+                case 'glider':
+                    // Glider pattern
+                    createPattern(centerX, centerY, [
+                        [1, 0, 0],
+                        [0, 1, 1],
+                        [1, 1, 0]
+                    ]);
+                    break;
+                    
+                case 'spaceship':
+                    // Lightweight spaceship pattern
+                    createPattern(centerX - 2, centerY - 2, [
+                        [0,1,1,1,1],
+                        [1,0,0,0,1],
+                        [0,0,0,0,1],
+                        [1,0,0,1,0]
+                    ]);
+                    break;
+                    
+                case 'pulsar':
+                    // Pulsar pattern
+                    createPulsar(centerX, centerY);
+                    break;
+                    
+                case 'gosper':
+                    // Gosper glider gun pattern (simplified)
+                    createGosperGliderGun(centerX - 25, centerY - 10);
+                    break;
+                    
+                case 'beehive':
+                    // Beehive pattern
+                    createPattern(centerX - 2, centerY - 1, [
+                        [0,1,1,0],
+                        [1,0,0,1],
+                        [0,1,1,0]
+                    ]);
+                    break;
+                    
+                case 'block':
+                    // Block pattern
+                    createPattern(centerX - 1, centerY - 1, [
+                        [1,1],
+                        [1,1]
+                    ]);
+                    break;
+                    
+                case 'loaf':
+                    // Loaf pattern
+                    createPattern(centerX - 2, centerY - 2, [
+                        [0,1,1,0],
+                        [1,0,0,1],
+                        [0,1,0,1],
+                        [0,0,1,0]
+                    ]);
+                    break;
+                    
+                case 'boat':
+                    // Boat pattern
+                    createPattern(centerX - 1, centerY - 1, [
+                        [1,1,0],
+                        [1,0,1],
+                        [0,1,0]
+                    ]);
+                    break;
+                    
+                case 'blinker':
+                    // Blinker pattern
+                    createPattern(centerX - 1, centerY - 1, [
+                        [1],
+                        [1],
+                        [1]
+                    ]);
+                    break;
+                    
+                case 'toad':
+                    // Toad pattern
+                    createPattern(centerX - 2, centerY - 1, [
+                        [0,1,1,1],
+                        [1,1,1,0]
+                    ]);
+                    break;
+                    
+                case 'beacon':
+                    // Beacon pattern
+                    createPattern(centerX - 2, centerY - 2, [
+                        [1,1,0,0],
+                        [1,1,0,0],
+                        [0,0,1,1],
+                        [0,0,1,1]
+                    ]);
+                    break;
+                    
+                case 'empty':
+                    // Already empty
+                    break;
+                    
+                case 'middleweight':
+                    // Middleweight spaceship pattern
+                    createPattern(centerX - 3, centerY - 2, [
+                        [0,0,1,1,1,1,1],
+                        [0,1,0,0,0,0,1],
+                        [1,0,0,0,0,0,1],
+                        [0,0,0,0,0,1,0],
+                        [0,1,0,1,0,0,0]
+                    ]);
+                    break;
+                    
+                case 'heavyweight':
+                    // Heavyweight spaceship pattern
+                    createPattern(centerX - 3, centerY - 2, [
+                        [0,0,1,1,1,1,1,1],
+                        [0,1,0,0,0,0,0,1],
+                        [1,0,0,0,0,0,0,1],
+                        [0,0,0,0,0,0,1,0],
+                        [0,1,0,1,1,0,0,0]
+                    ]);
+                    break;
+                    
+                case 'simkinglide':
+                    // Simkin glider gun pattern
+                    createPattern(centerX - 18, centerY - 8, [
+                        [1,1,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                        [1,1,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                        [0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                        [0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+                    ]);
+                    break;
+            }
+            
+            updateLiveCellsCount();
+            render();
+        }
+        
+        // Create a pattern at the specified position
+        function createPattern(x, y, pattern) {
+            const patternHeight = pattern.length;
+            const patternWidth = pattern[0].length;
+            
+            for (let dy = 0; dy < patternHeight; dy++) {
+                for (let dx = 0; dx < patternWidth; dx++) {
+                    const nx = x + dx;
+                    const ny = y + dy;
+                    
+                    if (nx >= 0 && nx < gridWidth && ny >= 0 && ny < gridHeight) {
+                        currentGrid[ny * gridWidth + nx] = pattern[dy][dx];
+                    }
+                }
+            }
+        }
+        
+        // Create a pulsar pattern
+        function createPulsar(x, y) {
+            const pattern = [
+                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                [0,0,0,0,1,1,1,0,0,0,1,1,1,0,0,0,0],
+                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                [0,0,1,0,0,0,0,1,0,1,0,0,0,0,1,0,0],
+                [0,0,1,0,0,0,0,1,0,1,0,0,0,0,1,0,0],
+                [0,0,1,0,0,0,0,1,0,1,0,0,0,0,1,0,0],
+                [0,0,0,0,1,1,1,0,0,0,1,1,1,0,0,0,0],
+                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                [0,0,0,0,1,1,1,0,0,0,1,1,1,0,0,0,0],
+                [0,0,1,0,0,0,0,1,0,1,0,0,0,0,1,0,0],
+                [0,0,1,0,0,0,0,1,0,1,0,0,0,0,1,0,0],
+                [0,0,1,0,0,0,0,1,0,1,0,0,0,0,1,0,0],
+                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                [0,0,0,0,1,1,1,0,0,0,1,1,1,0,0,0,0],
+                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+            ];
+            
+            createPattern(x - 8, y - 8, pattern);
+        }
+        
+        // Create a Gosper Glider Gun pattern (simplified version)
+        function createGosperGliderGun(x, y) {
+            const leftSquare = [
+                [0,0,0,0,0,0,0,0,0,0],
+                [0,0,0,0,0,0,0,0,0,0],
+                [0,0,0,0,0,0,0,0,0,0],
+                [0,0,0,0,0,0,0,0,0,0],
+                [0,0,0,0,0,0,1,0,0,0],
+                [0,0,0,0,0,1,0,0,0,0],
+                [0,0,0,0,0,1,0,0,0,0],
+                [0,0,0,0,0,1,1,1,0,0],
+                [0,0,0,0,0,0,0,0,0,0],
+                [0,0,0,0,0,0,0,0,0,0]
+            ];
+            
+            const rightSquare = [
+                [0,0,0,0,0,0,0,0,0,0],
+                [0,0,0,0,0,0,0,0,0,0],
+                [0,0,0,0,0,0,0,0,0,0],
+                [0,0,0,0,1,1,0,0,0,0],
+                [0,0,0,1,0,0,0,1,0,0],
+                [0,0,0,1,0,0,0,0,1,0],
+                [0,0,0,1,0,0,0,1,0,0],
+                [0,0,0,0,1,1,0,0,0,0],
+                [0,0,0,0,0,0,0,0,0,0],
+                [0,0,0,0,0,0,0,0,0,0]
+            ];
+            
+            createPattern(x, y, leftSquare);
+            createPattern(x + 20, y + 10, rightSquare);
+        }
+        
+        // Initialize the game when the page loads
+        window.onload = initGame;
+    </script>
+</body>
+</html>
